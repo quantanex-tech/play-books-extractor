@@ -1,0 +1,25 @@
+services:
+  playbooks-extractor:
+    build: .
+    image: playbooks-extractor:latest
+    container_name: playbooks-extractor
+    user: "${UID:-1000}:${GID:-1000}"
+    shm_size: "256mb"
+    ports:
+      - "${PLAYBOOKS_BIND_HOST:-127.0.0.1}:${PLAYBOOKS_PORT:-8080}:8080"
+    environment:
+      PLAYBOOKS_DATA_DIR: /data
+      PLAYBOOKS_CONFIG_DIR: /config
+      PLAYBOOKS_HOST: 0.0.0.0
+      PLAYBOOKS_PORT: "8080"
+      PLAYBOOKS_BASE_URL: "${PLAYBOOKS_BASE_URL:-https://play.google.com}"
+      PLAYBOOKS_BOOKS_API_URL: "${PLAYBOOKS_BOOKS_API_URL:-https://www.googleapis.com/books/v1/volumes}"
+      PLAYBOOKS_USE_BROWSER: "${PLAYBOOKS_USE_BROWSER:-auto}"
+      PLAYBOOKS_EXPORT_QUALITY: "${PLAYBOOKS_EXPORT_QUALITY:-high}"
+      PLAYBOOKS_SCHEDULE_ENABLED: "${PLAYBOOKS_SCHEDULE_ENABLED:-true}"
+      PLAYBOOKS_SCHEDULE_CRON: "${PLAYBOOKS_SCHEDULE_CRON:-0 2 * * *}"
+      TZ: "${TZ:-}"
+    volumes:
+      - "${PLAYBOOKS_HOST_DATA_DIR:-./data}:/data:Z"
+      - "${PLAYBOOKS_HOST_CONFIG_DIR:-./config}:/config:Z"
+    restart: unless-stopped

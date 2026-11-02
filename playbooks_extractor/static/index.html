@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Play Books Extractor</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-icon" aria-hidden="true">🎧</div>
+          <div>
+            <h1>Play Books Extractor</h1>
+            <p class="subtitle">Local Google Play Books audiobook &amp; companion PDF liberator</p>
+          </div>
+        </div>
+        <div class="topbar-meta">
+          <span id="sse-indicator" class="pill pill-muted" title="Real-time Server-Sent Events stream">
+            <span class="dot"></span>
+            <span id="sse-text">Connecting…</span>
+          </span>
+          <span class="pill pill-outline" title="Configured container data folder">
+            📁 <code id="data-dir-label">/data</code>
+          </span>
+        </div>
+      </header>
+
+      <div id="toast-banner" class="toast hidden" role="status" aria-live="polite"></div>
+
+      <section class="stats-grid" aria-label="Library overview">
+        <div class="stat-card">
+          <span class="stat-label">Extracted Audiobooks</span>
+          <strong id="stat-extracted" class="stat-value accent-emerald">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Currently Exporting</span>
+          <strong id="stat-exporting" class="stat-value accent-blue">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Available to Export</span>
+          <strong id="stat-available" class="stat-value">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Tracked</span>
+          <strong id="stat-total" class="stat-value">0</strong>
+        </div>
+      </section>
+
+      <!-- Authentication Card -->
+      <section class="card" id="auth-section">
+        <div class="card-header">
+          <div class="card-title-row">
+            <h2>Google Play Books Authentication</h2>
+            <span id="auth-badge" class="pill pill-warning">Not Authenticated</span>
+          </div>
+          <button id="toggle-auth-btn" type="button" class="btn btn-ghost btn-sm">
+            Hide Panel
+          </button>
+        </div>
+
+        <p id="auth-message" class="auth-summary">
+          Import session cookies from an authenticated desktop browser tab on
+          <code>https://play.google.com/books</code>.
+        </p>
+
+        <div id="auth-body" class="auth-body">
+          <div class="instructions-box">
+            <strong>Quick Setup (choose either method):</strong>
+            <ol>
+              <li>
+                <strong>Zero-extension (DevTools):</strong> Open
+                <code>play.google.com/books</code> signed in → press <kbd>F12</kbd> →
+                <em>Network</em> tab → right-click the top <code>books</code> request →
+                <em>Copy → Copy as cURL</em>, and paste below.
+              </li>
+              <li>
+                <strong>Cookie File / JSON:</strong> Export <code>cookies.txt</code> (Netscape)
+                or JSON cookies from your browser and upload or paste below.
+              </li>
+            </ol>
+          </div>
+
+          <form id="cookie-form" class="cookie-form">
+            <div class="form-row">
+              <label class="file-label" for="cookie-file">
+                <span>Upload <code>cookies.txt</code> or <code>cookies.json</code>:</span>
+                <input id="cookie-file" name="file" type="file" accept=".txt,.json,text/plain,application/json" />
+              </label>
+            </div>
+            <div class="form-row">
+              <label for="cookie-textarea">Or paste cookies.txt, JSON array, cURL command, or Cookie header:</label>
+              <textarea
+                id="cookie-textarea"
+                rows="4"
+                placeholder="Paste Netscape cookies.txt, Cookie-Editor JSON, 'curl https://play.google.com/books -H ...' or 'SID=...; HSID=...'"
+              ></textarea>
+            </div>
+            <div class="button-row">
+              <button id="save-cookies-btn" type="submit" class="btn btn-primary">
+                Import &amp; Verify Session
+              </button>
+              <button id="verify-cookies-btn" type="button" class="btn btn-secondary">
+                Re-verify Session
+              </button>
+              <button id="clear-cookies-btn" type="button" class="btn btn-danger-outline">
+                Clear Session
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Scheduled Sync & Auto-Export Card -->
+      <section class="card" id="schedule-section">
+        <div class="card-header">
+          <div class="card-title-row">
+            <h2>Scheduled Sync &amp; Auto-Export</h2>
+            <span id="schedule-badge" class="pill pill-success">Active · Daily at 02:00</span>
+          </div>
+          <button id="toggle-schedule-btn" type="button" class="btn btn-ghost btn-sm">
+            Hide Panel
+          </button>
+        </div>
+
+        <p id="schedule-summary" class="card-sub">
+          Automatically syncs your Google Play Books library and exports any newly purchased or missing audiobooks on your schedule. If no new books are found, it stops immediately.
+        </p>
+
+        <div id="schedule-body" class="schedule-body">
+          <form id="schedule-form" class="schedule-form" novalidate>
+            <div class="schedule-controls-row">
+              <label class="checkbox-label" for="schedule-enabled">
+                <input id="schedule-enabled" type="checkbox" checked />
+                <span>Enable scheduled sync &amp; export</span>
+              </label>
+            </div>
+
+            <div class="schedule-input-row">
+              <div class="cron-field-wrap">
+                <label for="schedule-cron-input">Schedule (standard 5-field crontab):</label>
+                <div class="cron-input-group">
+                  <input
+                    id="schedule-cron-input"
+                    type="text"
+                    class="cron-input"
+                    value="0 2 * * *"
+                    placeholder="0 2 * * *"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-describedby="schedule-validation-msg cron-helper-box"
+                  />
+                  <button id="save-schedule-btn" type="submit" class="btn btn-primary">
+                    Save Schedule
+                  </button>
+                </div>
+                <div id="schedule-validation-msg" class="cron-validation" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+
+            <div id="cron-helper-box" class="instructions-box cron-helper">
+              <div class="cron-helper-header">
+                <strong>Crontab Format Guide:</strong>
+                <code>minute hour day-of-month month day-of-week</code>
+              </div>
+              <div class="cron-fields-grid" aria-label="Crontab fields reference">
+                <div><code>minute</code> <span>0–59</span></div>
+                <div><code>hour</code> <span>0–23</span></div>
+                <div><code>day-of-month</code> <span>1–31</span></div>
+                <div><code>month</code> <span>1–12 (or JAN–DEC)</span></div>
+                <div><code>day-of-week</code> <span>0–6 (0 or 7 = Sun)</span></div>
+              </div>
+              <p class="cron-operators-hint">
+                Operators: <code>*</code> any value · <code>*/n</code> every <em>n</em> units ·
+                <code>a-b</code> range · <code>a,b</code> list (e.g. <code>0 2 * * *</code> = 2:00 AM daily).
+              </p>
+              <div class="cron-presets">
+                <span class="preset-label">Quick presets:</span>
+                <button type="button" class="btn btn-ghost btn-sm cron-preset-btn" data-cron="0 2 * * *">
+                  <code>0 2 * * *</code> Daily 2:00 AM
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm cron-preset-btn" data-cron="* * * * *">
+                  <code>* * * * *</code> Every minute
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm cron-preset-btn" data-cron="0 */6 * * *">
+                  <code>0 */6 * * *</code> Every 6 hours
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm cron-preset-btn" data-cron="0 3 * * 0">
+                  <code>0 3 * * 0</code> Sundays 3:00 AM
+                </button>
+              </div>
+            </div>
+
+            <div class="schedule-status-bar">
+              <div><strong>Next check:</strong> <span id="schedule-next-run">—</span></div>
+              <div><strong>Last check:</strong> <span id="schedule-last-run">Not run yet</span></div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Active Exports Live Progress Section -->
+      <section id="active-exports-section" class="card card-highlight hidden" aria-live="polite">
+        <div class="card-header">
+          <div class="card-title-row">
+            <h2>Active Exports</h2>
+            <span id="active-exports-badge" class="pill pill-info">0 running</span>
+          </div>
+        </div>
+        <div id="active-exports-list" class="active-exports-list"></div>
+      </section>
+
+      <!-- Extracted & Library Audiobooks Section -->
+      <section class="card">
+        <div class="card-header toolbar-header">
+          <div>
+            <h2>Audiobooks</h2>
+            <p class="card-sub">
+              Organised in named &amp; ID'd folders (<code>&lt;Title&gt; [&lt;VolumeID&gt;]/</code>) with playable
+              <code>.m4a</code> audio and accompanying <code>.pdf</code> files.
+            </p>
+          </div>
+          <div class="button-row">
+            <button id="sync-library-btn" type="button" class="btn btn-primary">
+              Sync Google Play Library
+            </button>
+            <button id="export-all-btn" type="button" class="btn btn-emerald">
+              Export All Available
+            </button>
+            <button id="reconcile-btn" type="button" class="btn btn-secondary">
+              Rescan Data Folder
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="tabs" role="tablist" aria-label="Filter audiobooks">
+            <button type="button" class="tab active" data-filter="extracted">
+              Extracted (<span id="tab-count-extracted">0</span>)
+            </button>
+            <button type="button" class="tab" data-filter="exporting">
+              Exporting (<span id="tab-count-exporting">0</span>)
+            </button>
+            <button type="button" class="tab" data-filter="all">
+              All Library (<span id="tab-count-all">0</span>)
+            </button>
+            <button type="button" class="tab" data-filter="available">
+              Available (<span id="tab-count-available">0</span>)
+            </button>
+          </div>
+          <input
+            id="search-input"
+            type="search"
+            class="search-input"
+            placeholder="Filter by title, author, or volume ID…"
+            aria-label="Filter audiobooks"
+          />
+        </div>
+
+        <div id="books-empty" class="empty-state">
+          <p id="books-empty-text">
+            No extracted audiobooks yet. Import your Google Play Books cookies and click
+            <strong>Sync Google Play Library</strong> to discover and export your audiobooks.
+          </p>
+        </div>
+
+        <div id="books-list" class="books-list"></div>
+      </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

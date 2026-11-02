@@ -1,0 +1,36 @@
+# Local runtime volumes, session cookies, SQLite DB, and extracted audiobooks
+/data/
+/config/
+cookies.txt
+cookies.json
+*cookies*.txt
+*cookies*.json
+*.db
+*.db-shm
+*.db-wal
+*.part
+
+# Local agent & project-workflow state (not publication inputs)
+/AGENTS.md
+/project/
+/.agents/
+/.codex/
+/.gemini/
+
+# Python virtual environments, build artifacts, and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environment overrides & OS metadata
+.env
+.env.*
+!.env.example
+.DS_Store
